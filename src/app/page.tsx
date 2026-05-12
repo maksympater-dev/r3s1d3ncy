@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import BrandResidencyExperience from '@/components/BrandResidencyExperience'
+import CitySelectorExperience from '@/components/CitySelectorExperience'
 import LoadingScreen from '@/components/LoadingScreen'
 
 export default function Home() {
@@ -10,7 +10,7 @@ export default function Home() {
   return (
     <>
       {!loaded && <LoadingScreen onComplete={() => setLoaded(true)} />}
-      <BrandResidencyExperience />
+      <CitySelectorExperience />
     </>
   )
 }

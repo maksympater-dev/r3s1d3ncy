@@ -30,12 +30,15 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 dev-server*.log
+prod-*.log
 
 # local agent/editor state
 .claude/settings.local.json
 
 # env files (can opt-in for committing if needed)
 .env*
+mapbox.txt
+clerk.txt
 
 # vercel
 .vercel

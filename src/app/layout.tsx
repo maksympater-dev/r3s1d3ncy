@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -50,14 +51,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${spotifyMixUI.variable} ${spotifyMixTitle.variable} h-full antialiased`}
-    >
-      {/* Добавляем bg-black для черного фона и text-white для светлого текста по умолчанию */}
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="en"
+        className={`${spotifyMixUI.variable} ${spotifyMixTitle.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
