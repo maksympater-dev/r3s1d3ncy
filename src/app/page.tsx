@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import CitySelectorExperience from '@/components/CitySelectorExperience'
+import GpuAsciiBackdrop from '@/components/GpuAsciiBackdrop'
 import LoadingScreen from '@/components/LoadingScreen'
 
 export default function Home() {
@@ -9,8 +10,14 @@ export default function Home() {
 
   return (
     <>
-      {!loaded && <LoadingScreen onComplete={() => setLoaded(true)} />}
-      <CitySelectorExperience />
+      {!loaded ? (
+        <LoadingScreen onComplete={() => setLoaded(true)} />
+      ) : (
+        <>
+          <GpuAsciiBackdrop />
+          <CitySelectorExperience />
+        </>
+      )}
     </>
   )
 }

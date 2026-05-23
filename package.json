@@ -1,12 +1,14 @@
 {
-  "name": "test-app",
+  "name": "r3s1d3ncy",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "perf:audit": "node scripts/performance-audit.mjs",
+    "responsive:audit": "node scripts/responsive-audit.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.3.3",

@@ -34,9 +34,11 @@ prod-*.log
 
 # local agent/editor state
 .claude/settings.local.json
+.superpowers/
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 mapbox.txt
 clerk.txt
 
