@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import AuthActions from './AuthActions'
 import CityMapExperience, { type CityMapData } from './CityMapExperience'
+import { DEMO_MISSION_STORE } from './demoMissionStore'
+import StoreMissionModal from './StoreMissionModal'
 
 const CITY_MAPS: CityMapData[] = [
   {
@@ -165,6 +167,22 @@ const CITY_MAPS: CityMapData[] = [
 
 const CITIES = CITY_MAPS.map((city) => city.name)
 
+const CITY_SIGNAL_POINTS: Record<string, { x: number; y: number }> = {
+  Glasgow: { x: 18, y: 18 },
+  Newcastle: { x: 35, y: 34 },
+  Manchester: { x: 44, y: 52 },
+  Birmingham: { x: 56, y: 68 },
+  London: { x: 73, y: 82 },
+}
+
+const CITY_SIGNAL_ROUTES = [
+  ['Glasgow', 'Newcastle'],
+  ['Newcastle', 'Manchester'],
+  ['Manchester', 'Birmingham'],
+  ['Birmingham', 'London'],
+  ['Manchester', 'London'],
+] as const
+
 const getRelativePosition = (index: number, activeIndex: number) => {
   const total = CITIES.length
   let offset = index - activeIndex
@@ -213,6 +231,7 @@ const setCityTrackingProperties = (
 export default function CitySelectorExperience() {
   const [activeIndex, setActiveIndex] = useState(0)
   const [mapCity, setMapCity] = useState<CityMapData | null>(null)
+  const [isMissionOpen, setIsMissionOpen] = useState(false)
   const wheelLockedRef = useRef(false)
   const wheelUnlockTimerRef = useRef<number | null>(null)
   const pointerFrameRef = useRef<number | null>(null)
@@ -228,6 +247,17 @@ export default function CitySelectorExperience() {
       })),
     [activeIndex],
   )
+
+  const activeCity = CITY_MAPS[activeIndex]
+  const activeMissionCount = activeCity.stores.reduce(
+    (total, store) => total + store.missions.length,
+    0,
+  )
+  const activePartners = activeCity.stores.map((store) => store.partner).join(' / ')
+  const activeTierSignal = activeCity.stores
+    .map((store) => store.tier)
+    .filter((tier, index, tiers) => tiers.indexOf(tier) === index)
+    .join(' + ')
 
   useEffect(() => {
     return () => {
@@ -307,7 +337,7 @@ export default function CitySelectorExperience() {
   }
 
   const openActiveCity = () => {
-    setMapCity(CITY_MAPS[activeIndex])
+    setMapCity(activeCity)
   }
 
   if (mapCity) {
@@ -322,12 +352,21 @@ export default function CitySelectorExperience() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-background/92 px-[var(--page-gutter)] py-4">
-        <nav className="flex w-full flex-wrap items-center justify-between gap-3">
-          <div className="font-heading text-sm font-extrabold uppercase tracking-[0.14em] text-foreground sm:tracking-[0.18em]">
+      <header className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-background/92 px-[var(--page-gutter)] py-3 sm:py-4">
+        <nav className="flex w-full flex-nowrap items-center justify-between gap-2">
+          <div className="min-w-0 shrink font-heading text-xs font-extrabold uppercase tracking-[0.12em] text-foreground sm:text-sm sm:tracking-[0.18em]">
             R3S1D3NCY
           </div>
-          <AuthActions />
+          <div className="ml-auto flex shrink-0 flex-nowrap items-center justify-end gap-1 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMissionOpen(true)}
+              className="border border-primary/70 bg-primary/10 px-2 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-primary transition hover:bg-primary hover:text-primary-foreground min-[380px]:px-3 min-[430px]:text-[11px] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.16em]"
+            >
+              <span className="hidden min-[380px]:inline">Signal </span>Bypass
+            </button>
+            <AuthActions />
+          </div>
         </nav>
       </header>
 
@@ -342,10 +381,34 @@ export default function CitySelectorExperience() {
         }}
         tabIndex={0}
       >
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-[min(74vw,620px)] w-[min(74vw,620px)] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle,rgba(183,255,90,0.09)_0%,transparent_68%)] opacity-80" />
-          <div className="absolute bottom-0 right-0 h-[min(68vw,520px)] w-[min(68vw,520px)] bg-[radial-gradient(circle,rgba(110,168,255,0.09)_0%,transparent_70%)] opacity-80" />
-          <div className="absolute inset-y-0 right-[18%] w-px bg-gradient-to-b from-transparent via-border to-transparent" />
+        <div className="city-selector-backdrop" aria-hidden="true">
+          <span className="city-selector-map-glow city-selector-map-glow-primary" />
+          <span className="city-selector-map-glow city-selector-map-glow-secondary" />
+          <span className="city-selector-grid-field" />
+          <span className="city-selector-scan-corridor" />
+
+          <svg
+            className="city-selector-route-map"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            {CITY_SIGNAL_ROUTES.map(([fromCity, toCity], index) => {
+              const from = CITY_SIGNAL_POINTS[fromCity]
+              const to = CITY_SIGNAL_POINTS[toCity]
+
+              return (
+                <line
+                  key={`${fromCity}-${toCity}`}
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  className="city-selector-route"
+                  style={{ animationDelay: `${index * 0.16}s` }}
+                />
+              )
+            })}
+          </svg>
         </div>
 
         <div className="relative min-h-[calc(100dvh-5rem)] w-full">
@@ -358,6 +421,14 @@ export default function CitySelectorExperience() {
                 Rotate the city stack with your mouse wheel. Choose the market
                 where your discount hunt begins.
               </p>
+              <div
+                className="city-selector-summary"
+                aria-label={`${activeCity.name} city signal summary`}
+              >
+                <span>{activeCity.stores.length} retail nodes</span>
+                <span>{activeMissionCount} missions</span>
+                <span>{activeTierSignal}</span>
+              </div>
             </div>
 
             <div className="city-stack-stage absolute inset-0 z-10 flex items-center justify-center">
@@ -381,7 +452,7 @@ export default function CitySelectorExperience() {
                         ? openActiveCity()
                         : setActiveIndex(index)
                     }
-                    className={`city-stack-item absolute left-1/2 w-max max-w-[calc(100vw-(var(--page-gutter)*2))] text-center font-heading text-[clamp(3.25rem,14.5vw,9.25rem)] font-extrabold uppercase leading-[0.78] tracking-normal transition-[transform,opacity,color] duration-500 lg:text-[clamp(5rem,8.4vw,11rem)] ${
+                    className={`city-stack-item absolute left-1/2 w-[min(100%,calc(100vw-(var(--page-gutter)*2)))] text-center font-heading font-extrabold uppercase tracking-normal transition-[transform,opacity,color] duration-500 ${
                       isActive
                         ? 'is-active z-20 text-foreground'
                         : 'z-10 text-muted-foreground'
@@ -413,44 +484,68 @@ export default function CitySelectorExperience() {
             </div>
           </div>
 
-          <aside className="absolute right-0 top-1/2 z-30 hidden w-[min(22rem,24vw)] min-w-[20rem] max-w-[26.25rem] -translate-y-1/2 overflow-x-hidden overflow-y-auto rounded-[8px] border border-border bg-card p-6 shadow-[0_18px_48px_rgba(0,0,0,0.38)] 2xl:block 2xl:min-h-[min(68dvh,680px)]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(244,241,234,0.14),transparent_44%)]" />
-            <div className="absolute right-8 top-8 h-48 w-48 bg-[radial-gradient(circle,rgba(183,255,90,0.10)_0%,transparent_68%)] opacity-80" />
-            <div className="relative flex h-full flex-col justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.32em] text-primary">
-                  Active node
-                </p>
-                <h2 className="mt-5 font-heading text-6xl font-extrabold uppercase leading-none text-foreground">
-                  {CITIES[activeIndex]}
-                </h2>
-                <p className="mt-5 text-sm leading-6 text-muted-foreground">
-                  This city becomes the first access layer for hidden discount
-                  clues, retail scans, and tier progression.
-                </p>
-              </div>
+          <aside
+            className="city-intel-panel"
+            aria-label={`${activeCity.name} access intelligence`}
+          >
+            <span className="city-intel-panel-glow" aria-hidden="true" />
 
-              <div className="grid gap-3">
-                {['Location check', 'Retail scan', 'Access badge'].map(
-                  (item, index) => (
-                    <div
-                      key={item}
-                      className="flex items-center justify-between border border-border bg-background/70 p-4"
-                    >
-                      <span className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                        {item}
-                      </span>
-                      <span className="font-heading text-lg font-extrabold text-primary">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                    </div>
-                  ),
-                )}
+            <div className="city-intel-panel-header">
+              <p>Active city signal</p>
+              <h2>{activeCity.name}</h2>
+              <span>{activePartners}</span>
+            </div>
+
+            <div className="city-intel-metrics">
+              <div>
+                <span>Retail nodes</span>
+                <strong>{String(activeCity.stores.length).padStart(2, '0')}</strong>
+              </div>
+              <div>
+                <span>Mission queue</span>
+                <strong>{String(activeMissionCount).padStart(2, '0')}</strong>
+              </div>
+              <div>
+                <span>Tier signal</span>
+                <strong>{activeTierSignal}</strong>
               </div>
             </div>
+
+            <div className="city-intel-store-list">
+              {activeCity.stores.map((store) => (
+                <div key={store.name} className="city-intel-store">
+                  <div>
+                    <span>{store.partner}</span>
+                    <strong>{store.name}</strong>
+                  </div>
+                  <em>{store.tier}</em>
+                </div>
+              ))}
+            </div>
+
+            <div className="city-intel-mission">
+              <span>First scan</span>
+              <p>{activeCity.stores[0]?.missions[0]}</p>
+            </div>
           </aside>
+
+          <div
+            className="city-mobile-intel"
+            aria-label={`${activeCity.name} city access preview`}
+          >
+            <span>{activeCity.name}</span>
+            <strong>{activeCity.stores.length} nodes</strong>
+            <em>{activeMissionCount} missions queued</em>
+          </div>
         </div>
       </section>
+      {isMissionOpen && (
+        <StoreMissionModal
+          isOpen={isMissionOpen}
+          onClose={() => setIsMissionOpen(false)}
+          store={DEMO_MISSION_STORE}
+        />
+      )}
     </main>
   )
 }

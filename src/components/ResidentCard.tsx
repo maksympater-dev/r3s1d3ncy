@@ -19,7 +19,10 @@ export default function ResidentCard({ granted = false }: ResidentCardProps) {
     const stage = stageRef.current
     const card = cardRef.current
     if (!stage || !card) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const motionScale = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 0.35
+      : 1
 
     const onPointerMove = (e: PointerEvent) => {
       const rect = stage.getBoundingClientRect()
@@ -27,11 +30,11 @@ export default function ResidentCard({ granted = false }: ResidentCardProps) {
       const cy = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
 
       hoveringRef.current = true
-      target.current.rx = (cx - 0.5) * 32
-      target.current.ry = (cy - 0.5) * -22
+      target.current.rx = (cx - 0.5) * 32 * motionScale
+      target.current.ry = (cy - 0.5) * -22 * motionScale
       target.current.mx = cx * 100
       target.current.my = cy * 100
-      target.current.lift = 1
+      target.current.lift = 1 * motionScale
     }
 
     const onPointerLeave = () => {
@@ -53,11 +56,11 @@ export default function ResidentCard({ granted = false }: ResidentCardProps) {
       // Idle breathing when no pointer
       if (!hoveringRef.current) {
         const time = now * 0.001
-        t.rx = Math.sin(time * 0.4) * 3
-        t.ry = Math.cos(time * 0.25) * 2
+        t.rx = Math.sin(time * 0.46) * 4.8 * motionScale
+        t.ry = Math.cos(time * 0.32) * 3.4 * motionScale
         t.mx = 50 + Math.sin(time * 0.35) * 16
         t.my = 30 + Math.cos(time * 0.5) * 10
-        t.lift = 0.18
+        t.lift = 0.34 * motionScale
       }
 
       v.rx = (v.rx + (t.rx - c.rx) * 0.24 * dt) * Math.pow(0.66, dt)
@@ -110,6 +113,8 @@ export default function ResidentCard({ granted = false }: ResidentCardProps) {
         {/* Gloss sheen sweep */}
         <div className="r3-card-sheen" />
         <div className="r3-card-edge-light" />
+        <div className="r3-card-scan-beam" />
+        <div className="r3-card-scan-trace" />
 
         {/* Text overlay */}
         <div className="r3-card-content">
@@ -121,6 +126,9 @@ export default function ResidentCard({ granted = false }: ResidentCardProps) {
           <div className="r3-card-title">
             <span>R3S1D3NCY</span>
             <span className="r3-card-number">UK-01 / PRIVATE ACCESS</span>
+            <span className="r3-card-edition">
+              FOUNDING ISSUE / SINGLE OWNER KEY
+            </span>
           </div>
 
           <div className="r3-card-status">

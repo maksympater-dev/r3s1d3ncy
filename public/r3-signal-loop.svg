@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">R3 signal loop</title>
+  <desc id="desc">Animated neon route signal with pulsing city nodes and scanning light.</desc>
+  <style>
+    :root {
+      --bg: #050606;
+      --grid: rgba(244, 241, 234, 0.08);
+      --green: #b7ff5a;
+      --blue: #6ea8ff;
+      --white: #f4f1ea;
+    }
+
+    .grid-line {
+      stroke: var(--grid);
+      stroke-width: 1;
+    }
+
+    .route {
+      fill: none;
+      stroke: var(--green);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 18 22;
+      filter: url(#glow);
+      animation: routeFlow 3.8s linear infinite;
+    }
+
+    .route-soft {
+      fill: none;
+      stroke: rgba(183, 255, 90, 0.16);
+      stroke-width: 18;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: url(#wideGlow);
+    }
+
+    .node {
+      fill: var(--green);
+      filter: url(#glow);
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: nodePulse 2.4s ease-in-out infinite;
+    }
+
+    .node:nth-of-type(2) { animation-delay: 0.18s; }
+    .node:nth-of-type(3) { animation-delay: 0.36s; }
+    .node:nth-of-type(4) { animation-delay: 0.54s; }
+    .node:nth-of-type(5) { animation-delay: 0.72s; }
+
+    .ring {
+      fill: none;
+      stroke: rgba(244, 241, 234, 0.55);
+      stroke-width: 2;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: ringPulse 2.4s ease-out infinite;
+    }
+
+    .scan {
+      fill: url(#scanGradient);
+      opacity: 0.8;
+      transform: translateX(-360px) skewX(-14deg);
+      animation: scanPass 4.8s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+    }
+
+    .label {
+      fill: rgba(244, 241, 234, 0.82);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 8px;
+    }
+
+    .caption {
+      fill: rgba(183, 255, 90, 0.82);
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 4px;
+    }
+
+    .ticker {
+      fill: rgba(244, 241, 234, 0.42);
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      animation: tickerBlink 1.4s steps(2, end) infinite;
+    }
+
+    @keyframes routeFlow {
+      to { stroke-dashoffset: -80; }
+    }
+
+    @keyframes nodePulse {
+      0%, 100% { transform: scale(1); opacity: 0.78; }
+      50% { transform: scale(1.35); opacity: 1; }
+    }
+
+    @keyframes ringPulse {
+      0% { transform: scale(0.7); opacity: 0.7; }
+      70%, 100% { transform: scale(2.6); opacity: 0; }
+    }
+
+    @keyframes scanPass {
+      0% { transform: translateX(-420px) skewX(-14deg); opacity: 0; }
+      16% { opacity: 0.9; }
+      58% { opacity: 0.9; }
+      100% { transform: translateX(1120px) skewX(-14deg); opacity: 0; }
+    }
+
+    @keyframes tickerBlink {
+      0%, 48% { opacity: 0.24; }
+      49%, 100% { opacity: 0.74; }
+    }
+  </style>
+
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="68%">
+      <stop offset="0%" stop-color="#173016" stop-opacity="0.9" />
+      <stop offset="48%" stop-color="#071008" stop-opacity="0.82" />
+      <stop offset="100%" stop-color="#020303" stop-opacity="1" />
+    </radialGradient>
+
+    <linearGradient id="scanGradient" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#b7ff5a" stop-opacity="0" />
+      <stop offset="38%" stop-color="#b7ff5a" stop-opacity="0.14" />
+      <stop offset="50%" stop-color="#f4f1ea" stop-opacity="0.35" />
+      <stop offset="62%" stop-color="#6ea8ff" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#b7ff5a" stop-opacity="0" />
+    </linearGradient>
+
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="wideGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="16" />
+    </filter>
+  </defs>
+
+  <rect width="960" height="540" fill="var(--bg)" />
+  <rect width="960" height="540" fill="url(#bgGlow)" />
+
+  <g opacity="0.38">
+    <path class="grid-line" d="M0 90H960M0 180H960M0 270H960M0 360H960M0 450H960" />
+    <path class="grid-line" d="M120 0V540M240 0V540M360 0V540M480 0V540M600 0V540M720 0V540M840 0V540" />
+  </g>
+
+  <path class="scan" d="M140 -40h120l-90 620H50z" />
+
+  <g transform="translate(0 18)">
+    <path class="route-soft" d="M186 346C260 240 356 208 462 264S642 350 772 190" />
+    <path class="route" d="M186 346C260 240 356 208 462 264S642 350 772 190" />
+
+    <circle class="ring" cx="186" cy="346" r="16" />
+    <circle class="ring" cx="342" cy="238" r="16" />
+    <circle class="ring" cx="462" cy="264" r="16" />
+    <circle class="ring" cx="626" cy="322" r="16" />
+    <circle class="ring" cx="772" cy="190" r="16" />
+
+    <circle class="node" cx="186" cy="346" r="9" />
+    <circle class="node" cx="342" cy="238" r="9" />
+    <circle class="node" cx="462" cy="264" r="9" />
+    <circle class="node" cx="626" cy="322" r="9" />
+    <circle class="node" cx="772" cy="190" r="9" />
+  </g>
+
+  <text class="caption" x="58" y="76">LIVE ROUTE SIGNAL</text>
+  <text class="label" x="58" y="124">R3S1D3NCY</text>
+  <text class="ticker" x="58" y="480">SCAN  /  NODE ONLINE  /  ACCESS PATH ACTIVE</text>
+</svg>

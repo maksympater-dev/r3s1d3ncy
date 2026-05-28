@@ -10,6 +10,54 @@ interface StoreMissionModalProps {
 }
 
 type MissionStatus = 'active' | 'success' | 'failed' | 'saving' | 'saved'
+type RewardTier = 'Common' | 'Rare' | 'Legendary'
+
+const SIGNAL_BYPASS_PROGRESS_KEY = 'r3-signal-bypass-progress'
+const DEFAULT_LEVEL_ID = 'signal-bypass-01'
+
+const normalizeRewardTier = (tier: unknown): RewardTier => {
+  if (tier === 'Rare' || tier === 'Legendary') return tier
+  return 'Common'
+}
+
+const persistDemoProgress = (
+  store: StoreNode,
+  rewardTier: RewardTier,
+  traceDetect: number,
+  levelId: string,
+  completedLevelIds: string[] = [levelId],
+) => {
+  try {
+    const existing = JSON.parse(
+      window.localStorage.getItem(SIGNAL_BYPASS_PROGRESS_KEY) || '{}',
+    ) as {
+      completedLevels?: string[]
+    }
+    const completedLevels = Array.isArray(existing.completedLevels)
+      ? existing.completedLevels
+      : []
+    const lastReward = {
+      levelId,
+      store: store.name,
+      tier: rewardTier,
+      traceDetect,
+      completedAt: new Date().toISOString(),
+    }
+
+    window.localStorage.setItem(
+      SIGNAL_BYPASS_PROGRESS_KEY,
+      JSON.stringify({
+        ...existing,
+        completedLevels: Array.from(
+          new Set([...completedLevels, ...completedLevelIds]),
+        ),
+        lastReward,
+      }),
+    )
+  } catch {
+    // Demo progress is non-critical; the reward UI should still continue.
+  }
+}
 
 export default function StoreMissionModal({
   isOpen,
@@ -24,7 +72,7 @@ export default function StoreMissionModal({
 
   useEffect(() => {
     const handleGameMessage = (event: MessageEvent) => {
-      // Accept messages from localhost:3001 or current domain
+      // Accept the public same-origin game and the standalone dev prototype.
       if (
         event.origin !== 'http://localhost:3001' &&
         event.origin !== 'http://127.0.0.1:3001' &&
@@ -37,8 +85,28 @@ export default function StoreMissionModal({
       if (!data || typeof data !== 'object') return
 
       if (data.type === 'r3-mission-complete') {
-        setRewardTier(data.rewardTier || 'Common')
-        setTraceDetect(data.traceDetect ?? 0)
+        const nextRewardTier = normalizeRewardTier(data.rewardTier)
+        const nextTraceDetect =
+          typeof data.traceDetect === 'number' ? data.traceDetect : 0
+        const levelId =
+          typeof data.levelId === 'string' ? data.levelId : DEFAULT_LEVEL_ID
+        const completedLevelIds =
+          Array.isArray(data.completedLevelIds) &&
+          data.completedLevelIds.every((id: unknown) => typeof id === 'string')
+            ? data.completedLevelIds
+            : [levelId]
+
+        setRewardTier(nextRewardTier)
+        setTraceDetect(nextTraceDetect)
+        if (store) {
+          persistDemoProgress(
+            store,
+            nextRewardTier,
+            nextTraceDetect,
+            levelId,
+            completedLevelIds,
+          )
+        }
         setStatus('success')
       } else if (data.type === 'r3-mission-failed') {
         setStatus('failed')
@@ -49,7 +117,7 @@ export default function StoreMissionModal({
     return () => {
       window.removeEventListener('message', handleGameMessage)
     }
-  }, [])
+  }, [store])
 
   // Handle reward saving simulation
   const triggerClaimReward = () => {
@@ -102,25 +170,28 @@ export default function StoreMissionModal({
   }
 
   const activeTheme = getTierColor(rewardTier)
+  const missionSrc = `/r3-signal-bypass/?store=${encodeURIComponent(
+    store.name,
+  )}&tier=${encodeURIComponent(store.tier)}`
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/92 backdrop-blur-md px-4 py-4 md:py-6">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-background/92 px-2 py-2 backdrop-blur-md sm:px-4 sm:py-4 md:items-center md:py-6">
       {/* Background Cyber Grids */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(183,255,90,0.04)_0%,transparent_70%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-15 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px]" />
 
-      <div className="relative flex h-full w-full max-w-6xl flex-col items-center justify-center">
+      <div className="relative flex min-h-full w-full max-w-6xl flex-col items-center justify-start pb-3 pt-2 md:h-full md:min-h-0 md:justify-center md:py-0">
         {/* Terminal Header Info */}
         {status === 'active' && (
-          <header className="mb-3 flex w-full max-w-5xl items-center justify-between px-2 font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-muted-foreground md:text-[10px]">
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />
-              <span>BYPASS LINK ACTIVE // {store.name}</span>
+          <header className="mb-2 flex w-full max-w-5xl items-center justify-between gap-2 px-1 font-mono text-[8px] font-bold uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:px-2 sm:text-[9px] md:mb-3 md:text-[10px] md:tracking-[0.24em]">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-1.5 w-1.5 shrink-0 animate-ping rounded-full bg-primary" />
+              <span className="min-w-0 truncate">BYPASS LINK ACTIVE // {store.name}</span>
             </div>
             <button
               type="button"
               onClick={() => setShowConfirmAbort(true)}
-              className="border border-border/80 bg-card/40 px-3 py-1.5 text-[9px] transition hover:border-red-500/50 hover:text-red-400"
+              className="shrink-0 border border-border/80 bg-card/40 px-2 py-1.5 text-[8px] transition hover:border-red-500/50 hover:text-red-400 sm:px-3 sm:text-[9px]"
             >
               ABORT BYPASS
             </button>
@@ -129,14 +200,12 @@ export default function StoreMissionModal({
 
         {/* 1. Main Active Game View */}
         {status === 'active' && (
-          <div className="relative h-[22rem] w-full max-w-5xl overflow-hidden rounded-[8px] border border-border bg-black shadow-[0_24px_64px_rgba(0,0,0,0.64)] sm:h-[28rem] md:h-[35rem] lg:h-[40rem]">
+          <div className="relative h-[clamp(20rem,calc(100dvh-5.25rem),52rem)] w-full max-w-5xl overflow-hidden rounded-[6px] border border-border bg-black shadow-[0_24px_64px_rgba(0,0,0,0.64)] sm:h-[min(74dvh,44rem)] md:h-[35rem] md:rounded-[8px] lg:h-[40rem]">
             {/* Interactive scanlines and CRT grain */}
             <div className="pointer-events-none absolute inset-0 z-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.22)_50%),linear-gradient(90deg,rgba(255,0,0,0.04),rgba(0,255,0,0.01),rgba(0,0,255,0.04))] bg-[size:100%_4px,6px_100%] opacity-42" />
 
             <iframe
-              src={`http://localhost:3001/?store=${encodeURIComponent(
-                store.name,
-              )}&tier=${store.tier}`}
+              src={missionSrc}
               title="R3 Signal Bypass Game Frame"
               className="h-full w-full border-none bg-transparent"
               allow="autoplay"
@@ -308,7 +377,7 @@ export default function StoreMissionModal({
 
         {/* 4. Abort Confirmation Dialog Overlay */}
         {showConfirmAbort && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm px-4">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 backdrop-blur-sm px-4">
             <div
               className="w-full max-w-sm rounded-[10px] border border-border bg-card p-6 font-mono text-center shadow-2xl"
               role="dialog"

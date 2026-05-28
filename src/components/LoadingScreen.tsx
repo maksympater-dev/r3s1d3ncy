@@ -1,20 +1,65 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
-import ResidentCard from '@/components/ResidentCard'
+import Link from 'next/link'
+import LandingAccessMap from '@/components/LandingAccessMap'
 
 const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
 const CODE_LINES: { label: string; target: string }[] = [
-  { label: 'BIOMETRIC', target: 'VERIFIED' },
-  { label: 'CLEARANCE', target: 'RESIDENT' },
+  { label: 'CITY GRID', target: 'ONLINE' },
+  { label: 'MARKET',    target: 'UK-01' },
   { label: 'SESSION',   target: 'R3S1D3NCY' },
   { label: 'STATUS',    target: 'GRANTED' },
 ]
 
 type Phase = 'idle' | 'booting' | 'exiting'
+
+const landingCopyStyle: CSSProperties = {
+  position: 'absolute',
+  left: 'clamp(1.25rem, 5vw, 5rem)',
+  top: 'clamp(1.6rem, 5.6dvh, 4.5rem)',
+  zIndex: 10,
+  width: 'min(54rem, calc(100vw - 2.5rem))',
+  pointerEvents: 'none',
+  textShadow: '0 0 30px rgba(0, 0, 0, 0.9)',
+}
+
+const landingLogoStyle: CSSProperties = {
+  display: 'block',
+  fontFamily: 'var(--font-heading), Arial Black, sans-serif',
+  fontSize: 'clamp(2.35rem, 8.6vw, 7rem)',
+  fontWeight: 800,
+  lineHeight: 0.82,
+  letterSpacing: 0,
+  textTransform: 'uppercase',
+  color: 'rgba(244, 241, 234, 0.96)',
+  whiteSpace: 'nowrap',
+  textShadow: '0 0 28px rgba(0, 0, 0, 0.9), 0 0 46px rgba(183, 255, 90, 0.1)',
+}
+
+const landingTaglineStyle: CSSProperties = {
+  display: 'block',
+  marginTop: 'clamp(0.62rem, 1.4vw, 1rem)',
+  fontFamily: 'var(--font-mono), Consolas, monospace',
+  fontSize: 'clamp(0.62rem, 1vw, 0.82rem)',
+  fontWeight: 700,
+  letterSpacing: '0.22em',
+  textTransform: 'uppercase',
+  color: 'rgba(183, 255, 90, 0.86)',
+  textShadow: '0 0 18px rgba(183, 255, 90, 0.36)',
+}
+
+const landingBodyStyle: CSSProperties = {
+  maxWidth: '29rem',
+  marginTop: 'clamp(0.62rem, 1.4vw, 1rem)',
+  fontSize: 'clamp(0.82rem, 1.16vw, 1rem)',
+  lineHeight: 1.5,
+  color: 'rgba(244, 241, 234, 0.72)',
+}
 
 const randomChar = () => CHARS[Math.floor(Math.random() * CHARS.length)]
 const scrambled = (len: number) =>
@@ -23,10 +68,12 @@ const scrambled = (len: number) =>
 export default function LoadingScreen({ onComplete }: { onComplete: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const titleWrapRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const enterLinkRef = useRef<HTMLAnchorElement>(null)
   const codeWrapRef = useRef<HTMLDivElement>(null)
   const lockedTextRefs = useRef<HTMLSpanElement[]>([])
   const randomTextRefs = useRef<HTMLSpanElement[]>([])
+  const bootStartedRef = useRef(false)
+  const completionStartedRef = useRef(false)
 
   const [phase, setPhase] = useState<Phase>('idle')
 
@@ -40,11 +87,17 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
       ease: 'power3.out',
     })
     tl.from(
-      buttonRef.current,
+      enterLinkRef.current,
       { y: 20, opacity: 0, duration: 0.7, ease: 'power3.out' },
       '-=0.3',
     )
   }, { scope: containerRef })
+
+  const completeLoading = useCallback(() => {
+    if (completionStartedRef.current) return
+    completionStartedRef.current = true
+    onComplete()
+  }, [onComplete])
 
   // Phase 2: scramble/lock code
   useGSAP(
@@ -72,8 +125,11 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
       const totalDuration = staggerDelay * (CODE_LINES.length - 1) + lockDuration
 
       const startTime = performance.now()
-      let completionTimer: number | undefined
       let lastDomWrite = 0
+      const exitTimer = window.setTimeout(() => {
+        updateCodeLines(totalDuration + 200)
+        setPhase('exiting')
+      }, totalDuration + 800)
 
       const updateCodeLines = (elapsed: number) => {
         CODE_LINES.forEach((line, idx) => {
@@ -99,9 +155,6 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
 
         if (elapsed >= totalDuration + 200) {
           gsap.ticker.remove(tick)
-          completionTimer = window.setTimeout(() => {
-            setPhase('exiting')
-          }, 600)
         }
       }
 
@@ -110,46 +163,82 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
 
       return () => {
         gsap.ticker.remove(tick)
-        if (completionTimer) window.clearTimeout(completionTimer)
+        window.clearTimeout(exitTimer)
       }
     },
-    { dependencies: [phase], scope: containerRef },
+    { dependencies: [phase, completeLoading], scope: containerRef },
   )
 
   // Phase 3: exit slide-up
   useGSAP(
     () => {
       if (phase !== 'exiting') return
+
+      const fallbackTimer = window.setTimeout(completeLoading, 1400)
+
+      if (!containerRef.current) {
+        window.clearTimeout(fallbackTimer)
+        completeLoading()
+        return undefined
+      }
+
       gsap.to(containerRef.current, {
         yPercent: -100,
         duration: 1,
         ease: 'power4.inOut',
-        onComplete,
+        onComplete: () => {
+          window.clearTimeout(fallbackTimer)
+          completeLoading()
+        },
       })
+
+      return () => {
+        window.clearTimeout(fallbackTimer)
+      }
     },
-    { dependencies: [phase], scope: containerRef },
+    { dependencies: [phase, completeLoading], scope: containerRef },
   )
 
   const handleEnter = () => {
-    if (!buttonRef.current) return
-    gsap.to(buttonRef.current, {
+    if (bootStartedRef.current) return
+
+    bootStartedRef.current = true
+    setPhase('booting')
+
+    if (!enterLinkRef.current) return
+    gsap.killTweensOf(enterLinkRef.current)
+    gsap.to(enterLinkRef.current, {
       opacity: 0,
       y: 10,
       duration: 0.3,
       ease: 'power2.in',
-      onComplete: () => setPhase('booting'),
     })
+  }
+
+  const handleRootPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (bootStartedRef.current || !enterLinkRef.current) return
+
+    const rect = enterLinkRef.current.getBoundingClientRect()
+    const isInsideButton =
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom
+
+    if (isInsideButton) {
+      handleEnter()
+    }
   }
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 overflow-hidden bg-black text-foreground flex flex-col items-center justify-center px-6"
+      className="fixed inset-0 z-50 overflow-hidden bg-black px-6 py-[clamp(2rem,6dvh,4.5rem)] text-foreground flex flex-col items-center justify-end"
+      onPointerUpCapture={handleRootPointerUp}
     >
       <div className="r3-loading-atmosphere" aria-hidden="true">
         <span className="r3-loading-grid" />
         <span className="r3-loading-wave" />
-        <span className="r3-loading-scan" />
         <span className="r3-loading-corner r3-loading-corner-tl" />
         <span className="r3-loading-corner r3-loading-corner-tr" />
         <span className="r3-loading-corner r3-loading-corner-bl" />
@@ -158,24 +247,47 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
 
       <div
         ref={titleWrapRef}
-        className="relative z-10 mb-8 flex flex-col items-center overflow-visible sm:mb-10"
+        className="absolute inset-0 z-0 overflow-hidden"
       >
-        <ResidentCard granted={phase !== 'idle'} />
+        <LandingAccessMap active={phase !== 'idle'} />
+      </div>
+
+      <div
+        className={`r3-landing-copy${phase !== 'idle' ? ' is-unlocking' : ''}`}
+        style={{
+          ...landingCopyStyle,
+          opacity: phase === 'idle' ? 1 : 0.34,
+          transform: phase === 'idle'
+            ? 'translate3d(0, 0, 0)'
+            : 'translate3d(0, -0.5rem, 0) scale(0.98)',
+        }}
+      >
+        <h1 style={landingLogoStyle}>R3S1D3NCY</h1>
+        <span style={landingTaglineStyle}>Private UK retail access network</span>
+        <p style={landingBodyStyle}>
+          Unlock city missions, hidden store signals, and resident rewards
+          across selected UK retail nodes.
+        </p>
       </div>
 
       {/* Slot: button OR code-scramble */}
-      <div className="relative z-10 w-full max-w-md min-h-[180px] flex flex-col items-center justify-start">
+      <div className="relative z-10 flex min-h-[8.5rem] w-full max-w-md flex-col items-center justify-start">
         {phase === 'idle' && (
-          <button
-            ref={buttonRef}
-            onClick={handleEnter}
+          <Link
+            ref={enterLinkRef}
+            href="/?skipIntro=1"
+            data-r3-enter="true"
+            onClick={(event) => {
+              event.preventDefault()
+              handleEnter()
+            }}
             className="group relative overflow-hidden border border-border px-8 py-3 text-xs font-bold uppercase tracking-[0.28em] text-foreground hover:border-primary sm:px-10 sm:tracking-[0.4em]"
           >
             <span className="absolute inset-0 bg-primary -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out" />
             <span className="relative z-10 group-hover:text-primary-foreground transition-colors duration-500">
-              Enter now
+              Unlock UK access
             </span>
-          </button>
+          </Link>
         )}
 
         {(phase === 'booting' || phase === 'exiting') && (

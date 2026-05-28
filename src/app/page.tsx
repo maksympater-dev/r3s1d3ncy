@@ -1,23 +1,16 @@
-'use client'
+import HomeExperience from '@/components/HomeExperience'
 
-import { useState } from 'react'
-import CitySelectorExperience from '@/components/CitySelectorExperience'
-import GpuAsciiBackdrop from '@/components/GpuAsciiBackdrop'
-import LoadingScreen from '@/components/LoadingScreen'
+type HomeProps = {
+  searchParams?: Promise<{
+    skipIntro?: string | string[]
+  }>
+}
 
-export default function Home() {
-  const [loaded, setLoaded] = useState(false)
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams
+  const skipIntro = Array.isArray(params?.skipIntro)
+    ? params.skipIntro[0]
+    : params?.skipIntro
 
-  return (
-    <>
-      {!loaded ? (
-        <LoadingScreen onComplete={() => setLoaded(true)} />
-      ) : (
-        <>
-          <GpuAsciiBackdrop />
-          <CitySelectorExperience />
-        </>
-      )}
-    </>
-  )
+  return <HomeExperience initialLoaded={skipIntro === '1'} />
 }

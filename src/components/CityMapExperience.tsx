@@ -4,8 +4,8 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 
 import mapboxgl from 'mapbox-gl'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { SignInButton, SignUpButton, useUser } from '@clerk/nextjs'
 import AuthActions from './AuthActions'
+import { DEMO_MISSION_STORE } from './demoMissionStore'
 import StoreMissionModal from './StoreMissionModal'
 
 export type StoreNode = {
@@ -38,9 +38,7 @@ export default function CityMapExperience({
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
-  const { isSignedIn } = useUser()
   const [selectedStore, setSelectedStore] = useState<StoreNode>(city.stores[0])
-  const [authPromptOpen, setAuthPromptOpen] = useState(false)
   const [isMissionOpen, setIsMissionOpen] = useState(false)
   const [activeMissionStore, setActiveMissionStore] = useState<StoreNode | null>(null)
   const [mapFailed, setMapFailed] = useState(false)
@@ -167,19 +165,31 @@ export default function CityMapExperience({
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-background/92 px-[var(--page-gutter)] py-4">
-        <nav className="flex w-full flex-wrap items-center justify-between gap-3">
+      <header className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-background/92 px-[var(--page-gutter)] py-3 sm:py-4">
+        <nav className="flex w-full flex-nowrap items-center justify-between gap-2">
           <button
             type="button"
             onClick={onBack}
-            className="border border-border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground transition hover:border-primary hover:text-primary sm:px-4 sm:text-xs sm:tracking-[0.16em]"
+            className="shrink-0 border border-border px-2 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground transition hover:border-primary hover:text-primary sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.16em]"
           >
             Back
           </button>
           <div className="hidden text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground sm:block">
             Discount map
           </div>
-          <AuthActions />
+          <div className="ml-auto flex shrink-0 flex-nowrap items-center justify-end gap-1 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMissionStore(DEMO_MISSION_STORE)
+                setIsMissionOpen(true)
+              }}
+              className="border border-primary/70 bg-primary/10 px-2 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-primary transition hover:bg-primary hover:text-primary-foreground min-[380px]:px-3 min-[430px]:text-[11px] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.16em]"
+            >
+              <span className="hidden min-[380px]:inline">Signal </span>Bypass
+            </button>
+            <AuthActions />
+          </div>
         </nav>
       </header>
 
@@ -276,12 +286,8 @@ export default function CityMapExperience({
               <button
                 type="button"
                 onClick={() => {
-                  if (!isSignedIn) {
-                    setAuthPromptOpen(true)
-                  } else {
-                    setActiveMissionStore(selectedStore)
-                    setIsMissionOpen(true)
-                  }
+                  setActiveMissionStore(selectedStore)
+                  setIsMissionOpen(true)
                 }}
                 className="border border-primary bg-primary px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground transition hover:bg-transparent hover:text-primary"
               >
@@ -291,54 +297,6 @@ export default function CityMapExperience({
           </aside>
         </div>
       </section>
-
-      {authPromptOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/86 px-4 pb-4 md:items-center md:pb-0">
-          <button
-            type="button"
-            aria-label="Close authentication prompt"
-            className="absolute inset-0 cursor-default"
-            onClick={() => setAuthPromptOpen(false)}
-          />
-          <section className="relative max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-x-hidden overflow-y-auto rounded-[8px] border border-border bg-card p-6 shadow-[0_18px_48px_rgba(0,0,0,0.42)] md:p-8">
-            <div className="absolute right-0 top-0 h-48 w-48 bg-[radial-gradient(circle,rgba(183,255,90,0.10)_0%,transparent_68%)] opacity-80" />
-            <div className="relative flex flex-col gap-7">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.32em] text-primary">
-                  Account required
-                </p>
-                <h2 className="mt-3 font-heading text-3xl font-extrabold uppercase leading-none text-foreground md:text-5xl">
-                  Become a resident
-                </h2>
-              </div>
-
-              <p className="text-base leading-7 text-muted-foreground">
-                Create an account or sign in to start discount hunts, save retail
-                progress, and unlock Common, Rare, and Legendary rewards.
-              </p>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <SignInButton mode="modal">
-                  <button
-                    type="button"
-                    className="border border-border px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary hover:text-primary"
-                  >
-                    Sign in
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button
-                    type="button"
-                    className="border border-primary bg-primary px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground transition hover:bg-transparent hover:text-primary"
-                  >
-                    Create account
-                  </button>
-                </SignUpButton>
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
 
       {isMissionOpen && (
         <StoreMissionModal
