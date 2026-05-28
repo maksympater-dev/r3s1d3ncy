@@ -29,6 +29,14 @@ type CityMapExperienceProps = {
   onBack: () => void
 }
 
+const CITY_PASS_URLS: Record<string, string> = {
+  London: 'https://app.addtowallet.co/card/6a17bd10b881d55e2ddd0aa1',
+  Birmingham: 'https://app.addtowallet.co/card/6a17bdbdb881d55e2ddd0aa6',
+  Manchester: 'https://app.addtowallet.co/card/6a17bdf2b881d55e2ddd0aaa',
+  Newcastle: 'https://app.addtowallet.co/card/6a17b8d3b881d55e2ddd0a60',
+  Glasgow: 'https://app.addtowallet.co/card/6a17bddbb881d55e2ddd0aa8',
+}
+
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
 
 export default function CityMapExperience({
@@ -48,6 +56,7 @@ export default function CityMapExperience({
   const introComplete = introPhase !== 'center'
   const hasToken = Boolean(mapboxgl.accessToken)
   const hasLiveMap = hasToken && !mapFailed
+  const cityPassUrl = CITY_PASS_URLS[city.name]
 
   const selectStore = useCallback((store: StoreNode) => {
     setSelectedStore(store)
@@ -283,16 +292,29 @@ export default function CityMapExperience({
                 ))}
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveMissionStore(selectedStore)
-                  setIsMissionOpen(true)
-                }}
-                className="border border-primary bg-primary px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground transition hover:bg-transparent hover:text-primary"
-              >
-                Start hunt
-              </button>
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMissionStore(selectedStore)
+                    setIsMissionOpen(true)
+                  }}
+                  className="border border-primary bg-primary px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground transition hover:bg-transparent hover:text-primary"
+                >
+                  Start hunt
+                </button>
+                {cityPassUrl && (
+                  <a
+                    href={cityPassUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Claim ${city.name} Rare wallet pass`}
+                    className="border border-primary/55 bg-background/70 px-4 py-3 text-center text-xs font-bold uppercase tracking-[0.16em] text-primary transition hover:border-primary hover:bg-primary/10"
+                  >
+                    Claim your free pass
+                  </a>
+                )}
+              </div>
             </div>
           </aside>
         </div>
